@@ -166,11 +166,20 @@ async def _run_project_pipeline(project_id: str, custom_srt_text: Optional[str] 
             wav_path = proj_dir / "audio_16k.wav"
             has_wav = await asyncio.to_thread(media_ingest.extract_audio_wav, src_path, wav_path)
             if has_wav:
+                def _on_whisper_progress(frac: float) -> None:
+                    pct = 40 + int(22 * frac)
+                    done_m = int((info["duration"] * frac) // 60)
+                    tot_m = max(1, int(info["duration"] // 60))
+                    db.update_project(project_id, progress=pct, status_message=f"Transcribing audio ({done_m}m / {tot_m}m)...")
+
                 transcript = await asyncio.to_thread(
                     transcribe.transcribe_audio,
                     wav_path,
                     import_pref.get("sourceLang"),
                     vocab,
+                    "base",
+                    info["duration"],
+                    _on_whisper_progress,
                 )
             else:
                 transcript = []
@@ -354,6 +363,17 @@ def get_presets():
     }
 
 
+@app.get("/api/music")
+def get_builtin_music():
+    tracks = media_ingest.ensure_builtin_music()
+    return {
+        "tracks": [
+            {**t, "url": _media_url(t["path"])}
+            for t in tracks
+        ]
+    }
+
+
 @app.get("/api/recipes")
 def get_recipes():
     return {"recipes": db.list_recipes()}
@@ -435,7 +455,11 @@ async def create_project(
         ext = Path(file.filename).suffix or ".mp4"
         dest = UPLOADS_DIR / f"{uuid.uuid4().hex[:10]}{ext}"
         with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out)
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
         src_path = str(dest)
         if title == "Untitled Project":
             title = Path(file.filename).stem

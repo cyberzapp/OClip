@@ -10,10 +10,11 @@ EXPORTS_DIR = DATA_DIR / "exports"
 ASSETS_DIR = DATA_DIR / "assets"
 BROLL_DIR = DATA_DIR / "broll"
 SFX_DIR = DATA_DIR / "sfx"
+MUSIC_DIR = DATA_DIR / "music"
 ENV_FILE = ROOT_DIR / ".env.local"
 DB_PATH = DATA_DIR / "oclip.db"
 
-for d in [DATA_DIR, UPLOADS_DIR, PROJECTS_DIR, EXPORTS_DIR, ASSETS_DIR, BROLL_DIR, SFX_DIR]:
+for d in [DATA_DIR, UPLOADS_DIR, PROJECTS_DIR, EXPORTS_DIR, ASSETS_DIR, BROLL_DIR, SFX_DIR, MUSIC_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 

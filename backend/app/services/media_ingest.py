@@ -4,8 +4,9 @@ import struct
 import subprocess
 import wave
 from pathlib import Path
-from typing import Any, Dict, Optional
-from ..config import SFX_DIR
+from typing import Any, Dict, List, Optional
+import numpy as np
+from ..config import MUSIC_DIR, SFX_DIR
 
 
 def probe_media(path: Path) -> Dict[str, Any]:
@@ -139,6 +140,31 @@ def _gen_whoosh(path: Path) -> None:
     _write_wav(path, out, sr)
 
 
+BUILTIN_MUSIC_SPECS = [
+    {"id": "emotional-sorrow", "name": "Emotional / Heartfelt", "mood": "Sad / Emotional / Deep", "filename": "emotional-sorrow.mp3"},
+    {"id": "emotional-piano", "name": "Emotional Piano", "mood": "Touching / Storytelling", "filename": "emotional-piano.mp3"},
+    {"id": "serious-city", "name": "Serious / Late Night", "mood": "Serious / Podcast / Dark", "filename": "serious-city.mp3"},
+    {"id": "lofi-podcast", "name": "Lo-Fi Creator Beat", "mood": "Chill / Podcast / Focus", "filename": "lofi-podcast.mp3"},
+    {"id": "calm-story", "name": "Calm Inspiration", "mood": "Warm / Motivational", "filename": "calm-story.mp3"},
+    {"id": "inspiring-harp", "name": "Cinematic / Dreamy", "mood": "Dramatic / Reveal", "filename": "inspiring-harp.mp3"},
+]
+
+
+def ensure_builtin_music() -> List[Dict[str, Any]]:
+    """Return curated real MP3 background songs stored in data/music."""
+    tracks: List[Dict[str, Any]] = []
+    for spec in BUILTIN_MUSIC_SPECS:
+        p = MUSIC_DIR / spec["filename"]
+        if p.exists():
+            tracks.append({
+                "id": spec["id"],
+                "name": spec["name"],
+                "mood": spec["mood"],
+                "path": str(p),
+            })
+    return tracks
+
+
 def _gen_pop(path: Path) -> None:
     sr = 44100
     dur = 0.14
@@ -154,6 +180,31 @@ def _gen_pop(path: Path) -> None:
     _write_wav(path, out, sr)
 
 
+BUILTIN_MUSIC_SPECS = [
+    {"id": "emotional-sorrow", "name": "Emotional / Heartfelt", "mood": "Sad / Emotional / Deep", "filename": "emotional-sorrow.mp3"},
+    {"id": "emotional-piano", "name": "Emotional Piano", "mood": "Touching / Storytelling", "filename": "emotional-piano.mp3"},
+    {"id": "serious-city", "name": "Serious / Late Night", "mood": "Serious / Podcast / Dark", "filename": "serious-city.mp3"},
+    {"id": "lofi-podcast", "name": "Lo-Fi Creator Beat", "mood": "Chill / Podcast / Focus", "filename": "lofi-podcast.mp3"},
+    {"id": "calm-story", "name": "Calm Inspiration", "mood": "Warm / Motivational", "filename": "calm-story.mp3"},
+    {"id": "inspiring-harp", "name": "Cinematic / Dreamy", "mood": "Dramatic / Reveal", "filename": "inspiring-harp.mp3"},
+]
+
+
+def ensure_builtin_music() -> List[Dict[str, Any]]:
+    """Return curated real MP3 background songs stored in data/music."""
+    tracks: List[Dict[str, Any]] = []
+    for spec in BUILTIN_MUSIC_SPECS:
+        p = MUSIC_DIR / spec["filename"]
+        if p.exists():
+            tracks.append({
+                "id": spec["id"],
+                "name": spec["name"],
+                "mood": spec["mood"],
+                "path": str(p),
+            })
+    return tracks
+
+
 def _gen_ding(path: Path) -> None:
     sr = 44100
     dur = 0.55
@@ -165,6 +216,31 @@ def _gen_ding(path: Path) -> None:
         s = 0.65 * math.sin(2 * math.pi * 1046.5 * t) + 0.35 * math.sin(2 * math.pi * 1567.98 * t)
         out.append(s * env * 0.5)
     _write_wav(path, out, sr)
+
+
+BUILTIN_MUSIC_SPECS = [
+    {"id": "emotional-sorrow", "name": "Emotional / Heartfelt", "mood": "Sad / Emotional / Deep", "filename": "emotional-sorrow.mp3"},
+    {"id": "emotional-piano", "name": "Emotional Piano", "mood": "Touching / Storytelling", "filename": "emotional-piano.mp3"},
+    {"id": "serious-city", "name": "Serious / Late Night", "mood": "Serious / Podcast / Dark", "filename": "serious-city.mp3"},
+    {"id": "lofi-podcast", "name": "Lo-Fi Creator Beat", "mood": "Chill / Podcast / Focus", "filename": "lofi-podcast.mp3"},
+    {"id": "calm-story", "name": "Calm Inspiration", "mood": "Warm / Motivational", "filename": "calm-story.mp3"},
+    {"id": "inspiring-harp", "name": "Cinematic / Dreamy", "mood": "Dramatic / Reveal", "filename": "inspiring-harp.mp3"},
+]
+
+
+def ensure_builtin_music() -> List[Dict[str, Any]]:
+    """Return curated real MP3 background songs stored in data/music."""
+    tracks: List[Dict[str, Any]] = []
+    for spec in BUILTIN_MUSIC_SPECS:
+        p = MUSIC_DIR / spec["filename"]
+        if p.exists():
+            tracks.append({
+                "id": spec["id"],
+                "name": spec["name"],
+                "mood": spec["mood"],
+                "path": str(p),
+            })
+    return tracks
 
 
 def _gen_riser(path: Path) -> None:
@@ -180,3 +256,28 @@ def _gen_riser(path: Path) -> None:
         env = (t ** 1.4) * (1.0 - max(0.0, (t - 0.88) / 0.12))
         out.append(math.sin(phase) * env * 0.45)
     _write_wav(path, out, sr)
+
+
+BUILTIN_MUSIC_SPECS = [
+    {"id": "emotional-sorrow", "name": "Emotional / Heartfelt", "mood": "Sad / Emotional / Deep", "filename": "emotional-sorrow.mp3"},
+    {"id": "emotional-piano", "name": "Emotional Piano", "mood": "Touching / Storytelling", "filename": "emotional-piano.mp3"},
+    {"id": "serious-city", "name": "Serious / Late Night", "mood": "Serious / Podcast / Dark", "filename": "serious-city.mp3"},
+    {"id": "lofi-podcast", "name": "Lo-Fi Creator Beat", "mood": "Chill / Podcast / Focus", "filename": "lofi-podcast.mp3"},
+    {"id": "calm-story", "name": "Calm Inspiration", "mood": "Warm / Motivational", "filename": "calm-story.mp3"},
+    {"id": "inspiring-harp", "name": "Cinematic / Dreamy", "mood": "Dramatic / Reveal", "filename": "inspiring-harp.mp3"},
+]
+
+
+def ensure_builtin_music() -> List[Dict[str, Any]]:
+    """Return curated real MP3 background songs stored in data/music."""
+    tracks: List[Dict[str, Any]] = []
+    for spec in BUILTIN_MUSIC_SPECS:
+        p = MUSIC_DIR / spec["filename"]
+        if p.exists():
+            tracks.append({
+                "id": spec["id"],
+                "name": spec["name"],
+                "mood": spec["mood"],
+                "path": str(p),
+            })
+    return tracks

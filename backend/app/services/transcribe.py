@@ -1,7 +1,7 @@
 import re
 import wave
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 from faster_whisper import WhisperModel
 from ..presets import FILLER_WORDS, PROFANITY_LIST
@@ -30,6 +30,8 @@ def transcribe_audio(
     language: Optional[str] = None,
     vocabulary: Optional[List[str]] = None,
     model_size: str = "base",
+    total_duration_sec: float = 0.0,
+    on_progress: Optional[Callable[[float], None]] = None,
 ) -> List[Dict[str, Any]]:
     """Transcribe audio with faster-whisper returning paragraph & word-level timings."""
     model = get_whisper_model(model_size)
@@ -94,6 +96,8 @@ def transcribe_audio(
             "speaker": "Speaker 1",
             "words": words,
         })
+        if on_progress and total_duration_sec > 0 and idx % 10 == 0:
+            on_progress(min(1.0, float(seg.end) / total_duration_sec))
     return paragraphs
 
 

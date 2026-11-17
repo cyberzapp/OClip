@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Loader2,
   Mic,
+  Music,
   Pause,
   Play,
   Plus,
@@ -46,6 +47,7 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
   const [hideDeleted, setHideDeleted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [styleDirty, setStyleDirty] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   // Speech cleanup state
@@ -76,9 +78,24 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
 
+  // Built-in background music library
+  const [musicTracks, setMusicTracks] = useState<{ id: string; name: string; mood: string; path: string; url: string }[]>([]);
+  const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
+  const musicPreviewRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     setClip(initialClip);
   }, [initialClip]);
+
+  useEffect(() => {
+    fetch("/api/music")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.tracks && setMusicTracks(d.tracks))
+      .catch(() => {});
+    return () => {
+      musicPreviewRef.current?.pause();
+    };
+  }, []);
 
   const es = clip.editingScript;
 
@@ -168,6 +185,7 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
         const bust = updated.previewUrl ? `${updated.previewUrl}?t=${Date.now()}` : null;
         const withBust = { ...updated, previewUrl: bust };
         setClip(withBust);
+        setStyleDirty(false);
         onUpdated(withBust, transcript);
         setStatusMsg(`${resolution} render complete!`);
       } else {
@@ -648,8 +666,8 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
               </div>
             )}
 
-            {/* Live Headline Preview Overlay */}
-            {es.headline?.enabled && es.headline?.text && (es.headline?.persistent || es.layoutMode === "card" || currentTime < 4.5) && (
+            {/* Live Headline Preview Overlay (only shown if no rendered video yet or user has unbaked style edits) */}
+            {(!clip.previewUrl || styleDirty) && es.headline?.enabled && es.headline?.text && (es.headline?.persistent || es.layoutMode === "card" || currentTime < 4.5) && (
               <div
                 className={`pointer-events-none absolute top-[6%] left-3 right-3 text-center text-xs font-extrabold uppercase tracking-tight ${
                   es.headline.colorStyle === "red"
@@ -672,8 +690,8 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
               </div>
             )}
 
-            {/* Live Caption Overlay Preview (instant feedback before re-render) */}
-            {es.captions?.enabled && activeCaptionWords && (
+            {/* Live Caption Overlay Preview (only shown if no rendered video yet or user has unbaked style edits) */}
+            {(!clip.previewUrl || styleDirty) && es.captions?.enabled && activeCaptionWords && (
               <div
                 className="pointer-events-none absolute left-4 right-4 text-center font-extrabold drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]"
                 style={{ top: `${es.captions.positionY ?? 72}%`, fontSize: "15px" }}
@@ -1216,6 +1234,135 @@ export default function ClipEditor({ clip: initialClip, project: initialProject,
                         const nc = { ...clip, editingScript: { ...es, enhance: { ...es.enhance, autoColor: e.target.checked } } };
                         setClip(nc);
                         persistEdits(nc);
+                      }}
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between border-t border-white/5 pt-2.5 font-semibold text-amber-200">
+                    <span>Sharp HDR (Crisp Viral Look)</span>
+                    <input
+                      type="checkbox"
+                      checked={es.enhance?.sharpHdr ?? false}
+                      onChange={(e) => {
+                        const nc = { ...clip, editingScript: { ...es, enhance: { ...es.enhance, sharpHdr: e.target.checked } } };
+                        setClip(nc);
+                        persistEdits(nc);
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Built-in Background Music Selector */}
+                <div className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-semibold text-gray-200">
+                      <Music className="h-3.5 w-3.5 text-fuchsia-400" /> Background Music
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      Vol: {Math.round((es.music?.volume ?? 0.12) * 100)}%
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nc = { ...clip, editingScript: { ...es, music: { trackId: null, path: null, volume: es.music?.volume ?? 0.12 } } };
+                        setClip(nc);
+                        persistEdits(nc);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[11px] ${
+                        !es.music?.path
+                          ? "border-violet-500 bg-violet-600/20 text-white"
+                          : "border-white/10 bg-[#08090e] text-gray-400"
+                      }`}
+                    >
+                      <span>No Background Music</span>
+                      {!es.music?.path && <Check className="h-3.5 w-3.5 text-violet-400" />}
+                    </button>
+                    {musicTracks.map((tr) => {
+                      const active = es.music?.path === tr.path || es.music?.trackId === tr.id;
+                      const isPreviewing = previewTrackId === tr.id;
+                      return (
+                        <div
+                          key={tr.id}
+                          className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-[11px] ${
+                            active
+                              ? "border-fuchsia-500 bg-fuchsia-600/20 text-white"
+                              : "border-white/10 bg-[#08090e] text-gray-300"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nc = { ...clip, editingScript: { ...es, music: { trackId: tr.id, path: tr.path, volume: es.music?.volume ?? 0.12 } } };
+                              setClip(nc);
+                              persistEdits(nc);
+                            }}
+                            className="flex-1 text-left"
+                          >
+                            <div className="font-medium">{tr.name}</div>
+                            <div className="text-[10px] text-gray-400">{tr.mood}</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isPreviewing) {
+                                musicPreviewRef.current?.pause();
+                                setPreviewTrackId(null);
+                              } else {
+                                musicPreviewRef.current?.pause();
+                                const audio = new Audio(tr.url);
+                                audio.volume = 0.4;
+                                audio.loop = true;
+                                audio.play().catch(() => {});
+                                musicPreviewRef.current = audio;
+                                setPreviewTrackId(tr.id);
+                              }
+                            }}
+                            className="ml-2 rounded bg-white/10 px-2 py-1 text-[10px] text-gray-200 hover:bg-white/20"
+                          >
+                            {isPreviewing ? "Stop" : "Play"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-gray-400">
+                    <span>Music Level</span>
+                    <input
+                      type="range"
+                      min={0.04}
+                      max={0.4}
+                      step={0.02}
+                      value={es.music?.volume ?? 0.12}
+                      onChange={(e) => {
+                        const nc = { ...clip, editingScript: { ...es, music: { ...(es.music || {}), volume: parseFloat(e.target.value) } } };
+                        setClip(nc);
+                      }}
+                      onMouseUp={() => persistEdits(clip)}
+                    />
+                  </div>
+                  <label className="mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-white/15 bg-[#08090e] py-1.5 text-[11px] text-gray-300 hover:border-fuchsia-400">
+                    <Plus className="h-3.5 w-3.5 text-fuchsia-400" />
+                    <span>Upload Custom Song (.mp3 / .wav)</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const fd = new FormData();
+                        fd.append("file", f);
+                        fd.append("kind", "music");
+                        const res = await fetch("/api/assets/upload", { method: "POST", body: fd });
+                        if (res.ok) {
+                          const data = await res.json();
+                          const nc = { ...clip, editingScript: { ...es, music: { trackId: "custom", path: data.path, volume: es.music?.volume ?? 0.12 } } };
+                          setClip(nc);
+                          persistEdits(nc);
+                          setStatusMsg(`Added custom song: ${f.name} — click Re-Render to bake.`);
+                        }
                       }}
                     />
                   </label>

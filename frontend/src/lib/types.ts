@@ -85,6 +85,7 @@ export interface EditingScript {
     noiseReduction?: number;
     voiceBoost?: number;
     autoColor?: boolean;
+    sharpHdr?: boolean;
     colorIntensity?: number;
     censorStyle?: "**" | "--";
     censorAudioMode?: "beep" | "mute" | "none";
@@ -99,7 +100,7 @@ export interface EditingScript {
     voice?: string;
   };
   sfx?: { id: string; name: string; t: number; volume: number }[];
-  music?: { path?: string | null; volume?: number };
+  music?: { trackId?: string | null; path?: string | null; volume?: number };
 }
 
 export interface Clip {

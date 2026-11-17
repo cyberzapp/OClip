@@ -86,6 +86,8 @@ export default function OClipHome() {
   const [startSec, setStartSec] = useState("");
   const [endSec, setEndSec] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [repromptText, setRepromptText] = useState("");
 
   const loadBootstrap = useCallback(async () => {
@@ -203,20 +205,49 @@ export default function OClipHome() {
       fd.append("renderPref", JSON.stringify(recipe?.settings || { mode: "clip", enableCaption: true }));
       fd.append("importPref", JSON.stringify({ sourceLang }));
 
-      const res = await fetch("/api/projects", { method: "POST", body: fd });
-      if (res.ok) {
-        const created = (await res.json()) as Project;
-        setVideoUrl("");
-        setUploadFile(null);
-        setSrtFile(null);
-        setProjectTitle("");
-        setActiveProject(created);
-        setProjectClips([]);
-        setNav("results");
-        loadBootstrap();
-      }
+      // Upload directly to FastAPI (127.0.0.1:8000) to bypass Next.js's 10MB proxy limit on multi-GB videos
+      const backendOrigin =
+        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://127.0.0.1:8000";
+
+      setSubmitError(null);
+      setUploadPct(uploadFile ? 0 : null);
+
+      const created = await new Promise<Project>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${backendOrigin}/api/projects`);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setUploadPct(Math.round((ev.loaded / ev.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error("Invalid server response"));
+            }
+          } else {
+            reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`));
+          }
+        };
+        xhr.onerror = () => reject(new Error("Network error uploading video to local backend (port 8000)."));
+        xhr.send(fd);
+      });
+
+      setVideoUrl("");
+      setUploadFile(null);
+      setSrtFile(null);
+      setProjectTitle("");
+      setActiveProject(created);
+      setProjectClips([]);
+      setNav("results");
+      loadBootstrap();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to submit project");
     } finally {
       setSubmitting(false);
+      setUploadPct(null);
     }
   };
 
@@ -633,9 +664,16 @@ export default function OClipHome() {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 hover:opacity-95 disabled:opacity-40"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scissors className="h-4 w-4" />}
-                  Get Clips in 1 Click ({creditEstimate?.estimatedCredits ?? 1} cr)
+                  {submitting && uploadPct !== null
+                    ? `Uploading ${uploadPct}%...`
+                    : `Get Clips in 1 Click (${creditEstimate?.estimatedCredits ?? 1} cr)`}
                 </button>
               </div>
+              {submitError && (
+                <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-300">
+                  {submitError}
+                </div>
+              )}
             </form>
 
             {/* Recent Projects Gallery */}

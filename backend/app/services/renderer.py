@@ -521,7 +521,12 @@ def render_clip(
     v_curr = "vreframed"
 
     enhance_cfg = es.get("enhance", {})
-    if enhance_cfg.get("autoColor"):
+    if enhance_cfg.get("sharpHdr"):
+        filter_parts.append(
+            f"[{v_curr}]eq=contrast=1.18:brightness=0.02:saturation=1.28:gamma=0.95,unsharp=5:5:1.25:5:5:0.5[vhdr]"
+        )
+        v_curr = "vhdr"
+    elif enhance_cfg.get("autoColor"):
         intensity = float(enhance_cfg.get("colorIntensity", 0.7))
         contrast = round(1.0 + 0.12 * intensity, 3)
         sat = round(1.0 + 0.16 * intensity, 3)
