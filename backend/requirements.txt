@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+httpx
+aiofiles
+google-genai
+faster-whisper
+opencv-python-headless<5.0
+numpy
+pillow
